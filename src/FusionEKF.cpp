@@ -22,6 +22,10 @@ FusionEKF::FusionEKF() {
   H_laser_ = MatrixXd(2, 4);
   Hj_ = MatrixXd(3, 4);
 
+  //measurement matrix - laser
+  H_laser_ << 1, 0, 0, 0,
+              0, 1, 0, 0;
+      
   //measurement covariance matrix - laser
   R_laser_ << 0.0225, 0,
         0, 0.0225;
@@ -36,8 +40,19 @@ FusionEKF::FusionEKF() {
     * Finish initializing the FusionEKF.
     * Set the process and measurement noises
   */
-
-
+      
+  //create a 4D state vector, we don't know yet the values of the x state
+  Eigen::VectorXd x_in=VectorXd(4);
+      
+  //state covariance matrix P
+  Eigen::MatrixXd P_in = MatrixXd(4, 4);
+  P_in << 1, 0, 0, 0,
+          0, 1, 0, 0,
+          0, 0, 1000, 0,
+          0, 0, 0, 1000;
+      
+  ekf_=KalmanFilter();
+  ekf_.Init(x_in, P_in, H_laser_, R_laser_);
 }
 
 /**
@@ -46,7 +61,12 @@ FusionEKF::FusionEKF() {
 FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
-
+  
+  // TODO: Remove this when RADAR is implemented
+  // Ignore radar measurements for now...
+  if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    return;
+  }
 
   /*****************************************************************************
    *  Initialization
@@ -72,7 +92,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Initialize state.
       */
+      ekf_.x_<< measurement_pack.raw_measurements_(0), measurement_pack.raw_measurements_(1), 0, 0;
     }
+    
+    cout << "Intitial x_ = " << ekf_.x_ << endl;
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
@@ -83,30 +106,24 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    *  Prediction
    ****************************************************************************/
 
-  /**
-   TODO:
-     * Update the state transition matrix F according to the new elapsed time.
-      - Time is measured in seconds.
-     * Update the process noise covariance matrix.
-     * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
-   */
-
+  //compute the time elapsed between the current and previous measurements and update transition matrices
+  float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	//dt - expressed in seconds
+  previous_timestamp_ = measurement_pack.timestamp_;
+  ekf_.SetPredictMatrices(dt);
+    
+  //Call the Kalman Filter predict() function
   ekf_.Predict();
 
   /*****************************************************************************
    *  Update
    ****************************************************************************/
 
-  /**
-   TODO:
-     * Use the sensor type to perform the update step.
-     * Update the state and covariance matrices.
-   */
-
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
   } else {
     // Laser updates
+    ekf_.Update(measurement_pack.raw_measurements_);
   }
 
   // print the output
