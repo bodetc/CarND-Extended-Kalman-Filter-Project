@@ -5,7 +5,24 @@
 class KalmanFilter {
 private:
   // Identity matrix of the correct size
-  Eigen::MatrixXd I_;
+  const Eigen::MatrixXd I_;
+  
+  // state transistion matrix
+  Eigen::MatrixXd F_;
+  
+  // process covariance matrix
+  Eigen::MatrixXd Q_;
+  
+  // measurement matrix
+  Eigen::MatrixXd H_laser_;
+  
+  // measurement covariance matrix
+  Eigen::MatrixXd R_laser_;
+  
+  /**
+   * Update the transition matrix F and the process covariance matrix Q to use the proper delta-t
+   */
+  void SetPredictionMatrices(float dt);
 
 public:
 
@@ -14,18 +31,6 @@ public:
 
   // state covariance matrix
   Eigen::MatrixXd P_;
-
-  // state transistion matrix
-  Eigen::MatrixXd F_;
-
-  // process covariance matrix
-  Eigen::MatrixXd Q_;
-
-  // measurement matrix
-  Eigen::MatrixXd H_;
-
-  // measurement covariance matrix
-  Eigen::MatrixXd R_;
 
   /**
    * Constructor
@@ -38,26 +43,11 @@ public:
   virtual ~KalmanFilter();
 
   /**
-   * Init Initializes Kalman filter
-   * @param x_in Initial state
-   * @param P_in Initial state covariance
-   * @param H_in Measurement matrix
-   * @param R_in Measurement covariance matrix
-   */
-  void Init(Eigen::VectorXd &x_in, Eigen::MatrixXd &P_in,
-      Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in);
-  
-  /**
-   * Update the transition matrix F and the process covariance matrix Q to use the proper delta-t
-   */
-  void SetPredictMatrices(float dt);
-
-  /**
    * Prediction Predicts the state and the state covariance
    * using the process model
    * @param delta_T Time between k and k+1 in s
    */
-  void Predict();
+  void Predict(float dt);
 
   /**
    * Updates the state by using standard Kalman Filter equations
