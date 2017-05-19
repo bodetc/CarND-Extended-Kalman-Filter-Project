@@ -1,4 +1,7 @@
 #include "kalman_filter.h"
+#include "tools.h"
+
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -9,8 +12,9 @@ KalmanFilter::KalmanFilter():
   P_(MatrixXd(4, 4)),
   F_(MatrixXd(4, 4)),
   Q_(MatrixXd(4, 4)),
-  H_laser_(MatrixXd(2, 4)),
-  R_laser_(MatrixXd(2, 2)) {
+  H_laser_(getHLaser()),
+  R_laser_(getRLaser()),
+  R_radar_(getRRadar()){
     
   /*****************************************************************************
    *  State
@@ -39,21 +43,31 @@ KalmanFilter::KalmanFilter():
         0, 1, 0, 1,
         1, 0, 1, 0,
         0, 1, 0, 1;
-    
-  /*****************************************************************************
-   *  Update
-   ****************************************************************************/
-
-  //measurement matrix - laser
-  H_laser_ << 1, 0, 0, 0,
-              0, 1, 0, 0;
-  
-  //measurement covariance matrix - laser
-  R_laser_ << 0.0225, 0,
-              0, 0.0225;
 }
 
 KalmanFilter::~KalmanFilter() {}
+
+MatrixXd KalmanFilter::getHLaser() {
+  MatrixXd H_laser = MatrixXd(2, 4);
+  H_laser << 1, 0, 0, 0,
+             0, 1, 0, 0;
+  return H_laser;
+}
+
+MatrixXd KalmanFilter::getRLaser() {
+  MatrixXd R_laser = MatrixXd(2, 2);
+  R_laser << 0.0225, 0,
+             0, 0.0225;
+  return R_laser;
+}
+
+MatrixXd KalmanFilter::getRRadar() {
+  MatrixXd R_radar = MatrixXd(3, 3);
+  R_radar << 0.09, 0, 0,
+             0, 0.0009, 0,
+             0, 0, 0.09;
+  return R_radar;
+}
 
 void KalmanFilter::Predict(float dt) {
   SetPredictionMatrices(dt);
@@ -83,18 +97,22 @@ void KalmanFilter::SetPredictionMatrices(float dt) {
         0.,           dt3*noise_ay, 0.,           dt2*noise_ay;
 }
 
+void KalmanFilter::GenericUpdate(const VectorXd &y, const MatrixXd &H, const MatrixXd &R) {
+  MatrixXd Ht = H.transpose();
+  MatrixXd S = H * P_ * Ht + R;
+  MatrixXd K = P_ * Ht * S.inverse();
+  x_ = x_ + K * y;
+  P_ = (I_ - K * H)*P_;
+}
+
 void KalmanFilter::Update(const VectorXd &z) {
-  MatrixXd PHt = P_ * H_laser_.transpose();
   VectorXd y = z - H_laser_ * x_;
-  MatrixXd S = H_laser_ * PHt + R_laser_;
-  MatrixXd K = PHt * S.inverse();
-  x_ = x_ + K*y;
-  P_ = (I_ - K * H_laser_)*P_;
+  GenericUpdate(y, H_laser_, R_laser_);
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
+  VectorXd y = z - Tools::CalculateMeasurementFunction(x_);
+  y(1)=remainderf(y(1), 2*M_PI); // normalization
+  MatrixXd Hj = Tools::CalculateJacobian(x_);
+  GenericUpdate(y, Hj, R_radar_);
 }

@@ -18,7 +18,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
   //  * the estimation vector size should not be zero
   //  * the estimation vector size should equal ground truth vector size
   if(estimations.size()!=ground_truth.size() || estimations.size()==0) {
-    std::cerr << "Error! The input is not valid for calculating the RMSE";
+    std::cerr << "Error! The input is not valid for calculating the RMSE" << std::endl;
     return rmse;
   }
   
@@ -54,23 +54,47 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
   
   //check division by zero
   if(r2<0.0000001) {
-    std::cerr << "Error! Impossible to divide by zero";
-    return Hj;
+    std::cerr << "Error! Impossible to divide by zero" << std::endl;
+    exit(0);
   }
   
   // position on the unit circle
   float pxr = px/r;
   float pyr = py/r;
   
-  // other variables needed in the Jacobian
-  float diff = (vx*py-vy*px);
-  float a = pyr*diff/r2;
-  float b = -pxr*diff/r2;
+  float diff = vx*py - vy*px;
   
   //compute the Jacobian matrix
-  Hj << pxr, pyr, 0., 0.,
-  -py/r2, px/r2, 0., 0.,
-  a, b, pxr, pyr;
+  Hj << pxr,        pyr,         0,   0,
+        -(py/r2),   (px/r2),     0,   0,
+        pyr*diff/r2, -pxr*diff/r2, pxr, pyr;
   
   return Hj;
+}
+
+VectorXd Tools::CalculateMeasurementFunction(const VectorXd& x_state) {
+  VectorXd h(3);
+  
+  //recover state parameters
+  float px = x_state(0);
+  float py = x_state(1);
+  float vx = x_state(2);
+  float vy = x_state(3);
+  
+  // get the distance from the car
+  float r2 = px*px + py*py;
+  //check division by zero
+  if(r2<0.0000001) {
+    std::cerr << "Error! Impossible to divide by zero";
+    exit(0);
+  }
+  
+  float rho = sqrt(r2);
+  float phi = atan2f(py,px);
+  float rho_dot = (px*vx+py*vy)/rho;
+  
+  //compute the Jacobian matrix
+  h << rho, phi, rho_dot;
+  
+  return h;
 }

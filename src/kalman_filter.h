@@ -14,15 +14,28 @@ private:
   Eigen::MatrixXd Q_;
   
   // measurement matrix
-  Eigen::MatrixXd H_laser_;
+  const Eigen::MatrixXd H_laser_;
   
   // measurement covariance matrix
-  Eigen::MatrixXd R_laser_;
+  const Eigen::MatrixXd R_laser_;
+  
+  //measurement covariance matrix - radar
+  const Eigen::MatrixXd R_radar_;
   
   /**
    * Update the transition matrix F and the process covariance matrix Q to use the proper delta-t
    */
   void SetPredictionMatrices(float dt);
+  
+  /**
+   * Performs a generic update step
+   */
+  void GenericUpdate(const Eigen::VectorXd &y, const Eigen::MatrixXd &H, const Eigen::MatrixXd &R);
+  
+  // Constant matrices initialization
+  static Eigen::MatrixXd getHLaser();
+  static Eigen::MatrixXd getRLaser();
+  static Eigen::MatrixXd getRRadar();
 
 public:
 
