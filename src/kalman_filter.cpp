@@ -98,11 +98,11 @@ void KalmanFilter::SetPredictionMatrices(float dt) {
 }
 
 void KalmanFilter::GenericUpdate(const VectorXd &y, const MatrixXd &H, const MatrixXd &R) {
-  MatrixXd Ht = H.transpose();
-  MatrixXd S = H * P_ * Ht + R;
-  MatrixXd K = P_ * Ht * S.inverse();
+  MatrixXd PHt = P_ * H.transpose();
+  MatrixXd S = R + H * PHt;
+  MatrixXd K = PHt * S.inverse();
   x_ = x_ + K * y;
-  P_ = (I_ - K * H)*P_;
+  P_ = (I_ - K * H) * P_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {

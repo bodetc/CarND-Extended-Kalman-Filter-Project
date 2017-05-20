@@ -22,18 +22,12 @@ FusionEKF::FusionEKF() {
 FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
-  
-  // TODO: Remove this when RADAR is implemented
-  // Ignore radar measurements for now...
-  if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
-    //return;
-  }
 
   /*****************************************************************************
    *  Initialization
    ****************************************************************************/
   if (!is_initialized_) {
-    
+
     // first measurement
     cout << "EKF: " << endl;
 
@@ -54,6 +48,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       px = measurement_pack.raw_measurements_(0);
       py = measurement_pack.raw_measurements_(1);
     }
+    
+    previous_timestamp_ = measurement_pack.timestamp_;
     
     // Initialize state.
     ekf_.x_<< px, py, 0., 0.;
